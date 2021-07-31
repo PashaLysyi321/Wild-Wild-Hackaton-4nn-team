@@ -15,10 +15,14 @@ import shutil
 
 app = Flask(__name__)
 
+UPLOAD_FOLDER = 'input_images' 
+ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'bmp', 'NEF']) 
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER 
+
 preprocess = Compose([
-    Resize(224),
-    CenterCrop(224),
-    ToTensor()
+	Resize(224),
+	CenterCrop(224),
+	ToTensor()
 ])
  
 def allowed_file(filename): 
@@ -31,48 +35,36 @@ def text_for_json(images,texts):
 	st = st[0:-1] + ']}'
 	return st
 
-UPLOAD_FOLDER = 'input_images' 
-ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'bmp', 'NEF']) 
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER 
-
-
 @app.route('/', methods=['GET', 'POST']) 
  
 def upload_file(): 
-    if request.method == 'POST': 
-        try:
-            shutil.rmtree("input_images")
-            shutil.rmtree("output_classes")
-        except:pass
-        os.makedirs('input_images',exist_ok=True) 
-        UPLOAD_FOLDER = 'input_images' 
-        ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'bmp', 'NEF']) 
-
-        app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER 
-
-        for file in request.files.getlist("file"): 
-            if file and allowed_file(file.filename): 
-                filename = file.filename 
-                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename)) 
-    return ''' 
+	if request.method == 'POST': 
+		try:
+			shutil.rmtree("input_images")
+			shutil.rmtree("output_classes")
+		except:pass
+		os.makedirs('input_images',exist_ok=True) 
+		for file in request.files.getlist("file"): 
+			if file and allowed_file(file.filename): 
+				filename = file.filename 
+				file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename)) 
+	return ''' 
 	<!doctype html> 
 	<html>
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
 	<script> 
-	var intTextBox = 2;
-	function insertAfter(referenceNode, newNode) {
-  		referenceNode.parentNode.insertBefore(newNode, referenceNode.nextSibling);
-	}
+	var intTextBox = 3;  
 	function addElement()  
 	{ 
 		intTextBox = intTextBox + 1; 
-		var last_input = document.getElementsByClassName('class').item(intTextBox-2);
-		var p = document.createElement("p");
-		var input = document.createElement("div");
-		input.innerHTML = `<input type=text name = class${intTextBox} class=class>`;
-		insertAfter(last_input,p);
-		insertAfter(p,input);
+		var contentID = document.getElementById('content'); 
+		var howManyTextBoxes = intTextBox;   
+		var newTBDiv = document.createElement('div');            
+		newTBDiv.setAttribute('id', 'strText' + intTextBox); 
+		newTBDiv.innerHTML += `<p><input type=text name = class${intTextBox}>`;                              
+		contentID.appendChild(newTBDiv);    
+		return False                      
 	} 
 	</script> 
 	<head>
@@ -96,8 +88,9 @@ def upload_file():
     </div>
 	<div class="container w3-xxlarge" align="center">
 		<form id=content action="sort" method=post><br>
-		  <p><input type=text name = class1 class = class> 
-		  <p><input type=text name = class2 class = class><p>
+		  <p><input type=text name = class1> 
+		  <p><input type=text name = class2>
+		  <p><input type=text name = class3><p><p>
 		  <p><a href="javascript:addElement();"><input type="button" class="w3-button w3-black w3-xxxlarge w3-hover-aqua" value="Add class"></a> 
 		  <input type=submit value=Sort class="w3-button w3-black w3-xxxlarge w3-hover-aqua">
 		</form>
@@ -118,59 +111,57 @@ def upload_file():
 
 @app.route('/sort/', methods=['GET', 'POST']) 
 def make_sorted_arhiv(): 
-    if request.method == 'POST': 
-        classes = [] 
-        for key in request.form: 
-            id_ = key.partition('.')[-1] 
-            classes.append(request.form[key]) 
-        images = []
-        list_sorted_of_photo = os.listdir("input_images")
-        for i in list_sorted_of_photo:
-            print(i)
-            im = Image.open("input_images/" + i).convert('RGB')
-            image = torch.round(preprocess(im)).tolist()
-            images.append(image)
+	if request.method == 'POST': 
+		classes = [] 
+		for key in request.form: 
+			id_ = key.partition('.')[-1] 
+			classes.append(request.form[key]) 
+		images = []
+		list_sorted_of_photo = os.listdir("input_images")
+		for i in list_sorted_of_photo:
+			print(i)
+			im = Image.open("input_images/" + i).convert('RGB')
+			image = torch.round(preprocess(im)).tolist()
+			images.append(image)
 
-        descriptions = {}
+		descriptions = {}
 
-        for my_class in classes:
-            descriptions[my_class] = "This is an image of " + str(my_class)
-        print(descriptions)
-        texts = [descriptions[key] for key in descriptions]
-        print(texts)
-        checker = 0
-        for im1 in images:
-            string_json = text_for_json([im1],texts)
-            print(string_json)
-            input = json.loads(string_json)
-            client = Algorithmia.client("simYKrM14fpua/WUk+v4SOYjzda1")
-            algo = client.algo("NNNN4/ImageSortNet1/0.4.0")
-            param_to_flask = algo.pipe(input).result.get('product')
-            print("param_to_flask")
-            print(param_to_flask)
+		for my_class in classes:
+			descriptions[my_class] = "This is an image of " + str(my_class)
 
-            os.makedirs('output_classes',exist_ok=True)
-            for i in classes:
-                os.makedirs('output_classes/'+i,exist_ok=True)
-            os.replace("input_images/"+str(list_sorted_of_photo[checker]), 'output_classes/'+str(classes[param_to_flask[0][0]])+'/'+str(list_sorted_of_photo[checker]))
-            checker +=1
+		texts = [descriptions[key] for key in descriptions]
+		string_json = text_for_json(images,texts)
+
+		input = json.loads(string_json)
+		client = Algorithmia.client("simYKrM14fpua/WUk+v4SOYjzda1")
+		algo = client.algo("NNNN4/ImageSortNet1/0.4.0")
+		param_to_flask = algo.pipe(input).result.get('product')
+		
+		print(param_to_flask)
+		
+		os.makedirs('output_classes',exist_ok=True)
+		for i in classes:
+			os.makedirs('output_classes/'+i,exist_ok=True)
+		for i in range(0,len(list_sorted_of_photo)):
+			print('output_classes/'+str(classes[param_to_flask[i][0]])+'/'+str(list_sorted_of_photo[i]))
+			os.replace("input_images/"+str(list_sorted_of_photo[i]), 'output_classes/'+str(classes[param_to_flask[i][0]])+'/'+str(list_sorted_of_photo[i]))
 
 
-        def zipdir(path, ziph):
-            # ziph is zipfile handle
-            for root, dirs, files in os.walk(path):
-                for file in files:
-                    ziph.write(os.path.join(root, file), 
-                               os.path.relpath(os.path.join(root, file), 
-                                               os.path.join(path, '..')))
+		def zipdir(path, ziph):
+			# ziph is zipfile handle
+			for root, dirs, files in os.walk(path):
+				for file in files:
+					ziph.write(os.path.join(root, file), 
+							   os.path.relpath(os.path.join(root, file), 
+											   os.path.join(path, '..')))
 
-        zipf = zipfile.ZipFile('Python.zip', 'w', zipfile.ZIP_DEFLATED)
-        zipdir('output_classes/', zipf)
-        zipf.close()
-
-        app.config['UPLOAD_FOLDER'] = "." 
-        return send_from_directory(app.config['UPLOAD_FOLDER'], "Python.zip", as_attachment=True)
-    return False
+		zipf = zipfile.ZipFile('Python.zip', 'w', zipfile.ZIP_DEFLATED)
+		zipdir('output_classes/', zipf)
+		zipf.close()
+		
+		app.config['UPLOAD_FOLDER'] = "." 
+		return send_from_directory(app.config['UPLOAD_FOLDER'], "Python.zip", as_attachment=True)
+	return False
 
 if __name__ == "__main__":
 	app.run()
