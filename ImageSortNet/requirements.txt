@@ -1,9 +1,0 @@
--f https://download.pytorch.org/whl/torch_stable.html
-Flask==0.10.1
-gunicorn==19.3.0
-Algorithmia
-Pillow
-numpy
-torch==1.8.1+cpu 
-torchvision==0.9.1+cpu
-pytest-shutil
