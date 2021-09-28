@@ -1,0 +1,28 @@
+PODS:
+  - Alamofire (5.4.3)
+  - IQKeyboardManagerSwift (6.5.6)
+  - R.swift (5.4.0):
+    - R.swift.Library (~> 5.3.0)
+  - R.swift.Library (5.3.0)
+
+DEPENDENCIES:
+  - Alamofire
+  - IQKeyboardManagerSwift
+  - R.swift
+
+SPEC REPOS:
+  trunk:
+    - Alamofire
+    - IQKeyboardManagerSwift
+    - R.swift
+    - R.swift.Library
+
+SPEC CHECKSUMS:
+  Alamofire: e447a2774a40c996748296fa2c55112fdbbc42f9
+  IQKeyboardManagerSwift: c7df9d2deb356c04522f5c4b7b6e4ce4d8ed94fe
+  R.swift: c533450b0f7dc494e0993f5f1a1db925d84c3006
+  R.swift.Library: 0fc583cb55a99e28901299cc451614cad1161962
+
+PODFILE CHECKSUM: dea3925c6ad953b56b3ad6c9141475f0eefce520
+
+COCOAPODS: 1.10.1
